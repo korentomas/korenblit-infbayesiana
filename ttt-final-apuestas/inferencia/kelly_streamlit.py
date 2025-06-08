@@ -263,11 +263,4 @@ else:
         "https://www.usatoday.com/gcdn/media/USATODAY/gameon/2012/10/14/10-14-smash-djoker-16_9.jpg?width=2902&height=1642&fit=crop&format=pjpg&auto=webp"
     )
 
-# footer
-st.markdown(
-    "---\n"
-    "### About\n"
-    "- **Kelly Criterion** sizing with numerical optimisation\n"
-    "- Daily-bet and max-stake risk controls\n"
-    "- Uses the refactored CSV schema seamlessly\n"
-)
+    
