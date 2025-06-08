@@ -22,7 +22,7 @@ st.set_page_config(
 
 # funciones helper
 def calculate_kelly_fraction(p: float, odds: float) -> float:
-    """fracción de Kelly tranqui, entre 0 y 0.99"""
+    """fracción de Kelly, entre 0 y 0.99"""
     if p <= 0 or p >= 1 or odds <= 1:
         return 0.0
     b = odds - 1
@@ -178,7 +178,7 @@ df["p_win"] = np.where(df["a_won"] == 1, df["p_a"], df["p_b"])
 df = df.dropna(subset=["date", "p_win"]).sort_values("date").reset_index(drop=True)
 
 # defino strategies
-strategies = [
+strategies = [ # puedo hacer algo con el p_win, después veo.
     dict(name="Kelly Full", type="kelly", fraction=1.0, filter=lambda r: r["p_win"] > 0.0),
     dict(name="Kelly ½",   type="kelly", fraction=0.5, filter=lambda r: r["p_win"] > 0.0),
     dict(name="Kelly ¼",   type="kelly", fraction=0.25, filter=lambda r: r["p_win"] > 0.0),
