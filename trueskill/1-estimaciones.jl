@@ -1,0 +1,37 @@
+using CSV
+using Dates
+using DataFrames
+using TrueSkillThroughTime
+using Distributions
+global const ttt = TrueSkillThroughTime
+
+
+df_atp = CSV.read("df_atp.csv", DataFrame,stringtype=String)
+df_atp = df_atp[.!ismissing.(df_atp.Date), :]
+
+
+composition = [ [[row["Winner"]],[row["Loser"]]]  for row in eachrow(df_atp)]
+
+times = [ Dates.value(row["Date"]-Date("1900-01-01"))  for row in eachrow(df_atp)]
+
+composition = [ [[row["Winner"]],[row["Loser"]]]  for row in eachrow(df_atp)]
+
+h = ttt.History(composition=composition, times = times, online=true, iterations=1, sigma=2.5)
+
+
+
+df = DataFrame()
+df.date = [ row["Date"] for row in eachrow(df_atp)]
+df.winner = [ ev.teams[1].items[1].agent for b in h.batches for ev in b.events]
+df.loser = [ ev.teams[2].items[1].agent for b in h.batches for ev in b.events]
+df.m_winner = [ b.skills[ev.teams[1].items[1].agent].online.mu for b in h.batches for ev in b.events]
+df.m_loser = [ b.skills[ev.teams[2].items[1].agent].online.mu for b in h.batches for ev in b.events]
+df.s_winner = [ b.skills[ev.teams[1].items[1].agent].online.sigma for b in h.batches for ev in b.events]
+df.s_loser = [ b.skills[ev.teams[2].items[1].agent].online.sigma for b in h.batches for ev in b.events]
+
+df.b_winner = df_atp.B365W # Bet365
+df.b_loser = df_atp.B365L # Bet365
+
+df.p_win = [cdf(Normal(0,1), (mu_w - mu_l)/sqrt(s_w^2 + s_l^2)) for (mu_w, s_w, mu_l, s_l) in zip(df.m_winner, df.s_winner, df.m_loser, df.s_loser)]
+
+CSV.write("predicciones_atp.csv", df; header=true)
