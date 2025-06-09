@@ -45,8 +45,8 @@ def simulate_strategy(
     strategy: dict,
     bankroll: float,
     min_bet: float,
-    max_bet_pct: float = 0.05,
-    daily_limit: int = 3,
+    max_bet_pct: float = None,
+    daily_limit: int = None,
 ):
     """simula cómo va el bankroll con una estrategia"""
     results = {
@@ -68,7 +68,7 @@ def simulate_strategy(
         if results["current_date"] != cur_date:
             results["current_date"] = cur_date
             results["daily_bets"] = 0
-        if results["daily_bets"] >= daily_limit:
+        if daily_limit is not None and results["daily_bets"] >= daily_limit:
             continue
 
         # elegí a quién apostar
@@ -93,7 +93,9 @@ def simulate_strategy(
         else:
             stake = 0
 
-        stake = max(min_bet, min(stake, bankroll * max_bet_pct, bankroll))
+        if max_bet_pct is not None:
+            stake = min(stake, bankroll * max_bet_pct)
+        stake = max(min_bet, min(stake, bankroll))
         if bankroll < min_bet or stake < min_bet:
             break
 
@@ -153,8 +155,22 @@ with st.sidebar:
     st.header("Simulation Parameters")
     initial_bankroll = st.number_input("Starting Bankroll ($)", 100, 100000, 1000, 100)
     min_bet = st.number_input("Minimum Bet ($)", 1, 1000, 10, 1)
-    max_daily_bets = st.slider("Max Bets Per Day", 1, 10, 3)
-    max_bet_pct = st.slider("Max Bet (% of Bankroll)", 1, 20, 5) / 100
+    
+    # Optional daily bet limit
+    use_daily_limit = st.checkbox("Limit daily bets", value=True)
+    max_daily_bets = st.slider("Max Bets Per Day", 1, 10, 3, disabled=not use_daily_limit)
+    max_daily_bets = max_daily_bets if use_daily_limit else None
+    
+    # Optional max bet percentage
+    use_max_bet_pct = st.checkbox("Limit max bet size", value=True)
+    max_bet_pct = st.slider("Max Bet (% of Bankroll)", 1, 20, 5, disabled=not use_max_bet_pct) / 100
+    max_bet_pct = max_bet_pct if use_max_bet_pct else None
+    
+    # Optional minimum win probability
+    use_min_prob = st.checkbox("Filter by minimum win probability", value=False)
+    min_win_prob = st.slider("Minimum win probability", 0.5, 0.95, 0.55, 0.05, disabled=not use_min_prob)
+    min_win_prob = min_win_prob if use_min_prob else 0.0
+    
     log_scale = st.checkbox("Plot bankroll on log scale", value=False)
 
     st.header("Data")
@@ -179,13 +195,13 @@ df = df.dropna(subset=["date", "p_win"]).sort_values("date").reset_index(drop=Tr
 
 # defino strategies
 strategies = [ # puedo hacer algo con el p_win, después veo.
-    dict(name="Kelly Full", type="kelly", fraction=1.0, filter=lambda r: r["p_win"] > 0.0),
-    dict(name="Kelly ½",   type="kelly", fraction=0.5, filter=lambda r: r["p_win"] > 0.0),
-    dict(name="Kelly ¼",   type="kelly", fraction=0.25, filter=lambda r: r["p_win"] > 0.0),
-    dict(name="Flat $20",  type="flat",  amount=20,     filter=lambda r: r["p_win"] > 0.0),
-    dict(name="Fixed 2 %", type="percentage", pct=0.02, filter=lambda r: r["p_win"] > 0.0),
-    dict(name="Edge x5",   type="edge", multiplier=5,   filter=lambda r: r["p_win"] > 0.0),
-    dict(name="Conservative", type="kelly", fraction=0.10, filter=lambda r: r["p_win"] > 0.0),
+    dict(name="Kelly Full", type="kelly", fraction=1.0, filter=lambda r: r["p_win"] >= min_win_prob),
+    dict(name="Kelly ½",   type="kelly", fraction=0.5, filter=lambda r: r["p_win"] >= min_win_prob),
+    dict(name="Kelly ¼",   type="kelly", fraction=0.25, filter=lambda r: r["p_win"] >= min_win_prob),
+    dict(name="Flat $20",  type="flat",  amount=20,     filter=lambda r: r["p_win"] >= min_win_prob),
+    dict(name="Fixed 2 %", type="percentage", pct=0.02, filter=lambda r: r["p_win"] >= min_win_prob),
+    dict(name="Edge x5",   type="edge", multiplier=5,   filter=lambda r: r["p_win"] >= min_win_prob),
+    dict(name="Conservative", type="kelly", fraction=0.10, filter=lambda r: r["p_win"] >= min_win_prob),
 ]
 
 # interfaz
